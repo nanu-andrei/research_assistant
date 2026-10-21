@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Multi-Skill Academic Research Agent
 
 An extensible, modular agent pipeline designed for academic literature discovery, knowledge extraction, and reference synthesis across structured phases.
@@ -112,3 +113,6 @@ To add a new skill to the agent:
    ```python
    agent.register_skill(LiteratureSynthesisSkill())
    ```
+=======
+# research_assistant
+>>>>>>> a374ce96eb2eb76018100d2f173aea6cb15ebd90
