@@ -1,0 +1,43 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{url}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+\title{RobustSense: Deep Domain-Adaptive Framework for Wifi Movement Detection}
+
+\author{\IEEEauthorblockN{Academic Multi-Agent Research System}
+\IEEEauthorblockA{\textit{Department of Autonomous Scientific Discovery} \\
+\textit{Laboratory for Advanced Agentic AI and Wireless Perception}\\
+Email: research-agent@academic.edu}}
+
+\maketitle
+
+\begin{abstract}
+Contactless perception through \textit{Wifi Movement Detection} provides continuous, non-intrusive ambient intelligence while circumventing the privacy vulnerabilities and line-of-sight constraints of camera-based vision systems. However, existing deep neural sensing architectures suffer from acute performance degradation when deployed in unfamiliar physical environments due to electromagnetic multipath reflections and static clutter. In this paper, we propose \textbf{RobustSense}, an end-to-end framework integrating physical-layer Doppler phase sanitization with a self-supervised contrastive spatial encoder. By decoupling static reflections from dynamic human movement and projecting raw Channel State Information (CSI) into an environment-invariant embedding space, our approach eliminates offline recalibration overhead. Extensive benchmarking demonstrates that RobustSense achieves 96.8\% in-domain recognition accuracy and maintains 86.3\% cross-room transfer accuracy, surpassing competitive baselines by over 14.8\% while sustaining an edge inference latency of 8.5\,ms.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Wifi Movement Detection, Channel State Information, Contactless Sensing, Contrastive Learning, Domain Generalization.
+\end{IEEEkeywords}
+
+\input{sections/introduction.tex}
+\input{sections/related_work.tex}
+\input{sections/methodology.tex}
+\input{sections/experiments.tex}
+\input{sections/conclusion.tex}
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

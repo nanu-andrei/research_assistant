@@ -1,0 +1,16 @@
+\section{Introduction}
+\label{sec:intro}
+\IEEEPARstart{I}{n} recent years, the paradigm of \textit{wifi movement detection} has transformed from an experimental curiosity into a foundational capability for ubiquitous ambient intelligence, smart healthcare monitoring, and non-intrusive surveillance. Unlike traditional vision-based perception systems that require line-of-sight illumination and introduce severe privacy and surveillance liabilities, wireless radio frequency (RF) signals natively permeate walls, preserve user anonymity, and operate continuously under all lighting conditions.
+
+Despite these compelling advantages, achieving robust performance in practical environments remains a formidable open challenge \cite{2604.05475v1}. As demonstrated by recent pioneering studies \cite{1004.4588v1}, wireless propagation is governed by complex physical multipath reflections, temporal channel drift, and carrier frequency offsets. Large language and vision-language models have reached striking capabilities by training on internetscale data [2, 12]. A key enabling factor is the abundance of self-supervised training signal — text can be scraped at scale, and images can be paired with captions from alt-text and surrounding context. Yet for manybehavioralmodalities — eye movemen...
+
+To overcome these critical barriers, in this paper we propose \textbf{RobustSense}, an end-to-end domain-invariant architecture tailored for \textit{wifi movement detection}. Specifically, we leverage physical-layer signal decoupling combined with self-supervised spatial contrastive learning. differ from comprehension; expertise is reflected in gaze allocation [13, 9]. Third, gaze is a fundamental signal across applications: training vision-language models on behavioral video, gaze-contingent rendering in virtual and augmented reality, social robotics, eye-based communication interfaces ...
+
+The principal contributions of this work are summarized as follows:
+\begin{itemize}
+    \item \textbf{Physical-Layer Multipath Decoupling:} We formulate a rigorous mathematical preprocessing framework that cleans raw channel state indicators and separates static clutter from dynamic human motion Doppler shifts.
+    \item \textbf{Domain-Invariant Feature Representation:} We introduce a self-supervised contrastive learning objective that extracts room-invariant spatial features, eliminating cumbersome offline recalibration when transitioning across distinct physical spaces.
+    \item \textbf{Comprehensive Empirical Validation:} We benchmark our proposed framework against state-of-the-art architectures across multiple testbeds and public datasets, demonstrating marked improvements in cross-domain transfer accuracy and inference efficiency.
+\end{itemize}
+
+\textit{Organization:} The remainder of this paper is structured as follows. Section~\ref{sec:related_work} surveys the state of the art and prior literature. Section~\ref{sec:methodology} presents the formal system model and our proposed architecture. Section~\ref{sec:experiments} reports empirical benchmark results and ablation studies. Finally, Section~\ref{sec:conclusion} concludes the paper with future research directions.

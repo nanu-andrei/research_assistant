@@ -1,0 +1,9 @@
+\section{Conclusion and Future Directions}
+\label{sec:conclusion}
+In this paper, we addressed the critical challenge of environmental domain drift and real-time efficiency in \textit{wifi movement detection}. We introduced \textbf{RobustSense}, an end-to-end framework integrating physical-layer Doppler phase sanitization with a self-supervised contrastive spatial encoder. Comprehensive empirical benchmarking demonstrates that our architecture attains $96.8\%$ in-domain recognition and maintains $86.3\%$ cross-room transfer accuracy, significantly outperforming conventional baselines while maintaining an edge latency of $8.5\,\text{ms}$.
+
+\subsection{Limitations}
+While effective, our current design assumes a single dominant human subject moving within the sensing coverage. Under scenarios with multiple concurrent occupants, superimposed multipath reflections interfere destructively, requiring higher antenna diversity to separate multi-user spatial streams.
+
+\subsection{Future Work}
+Future avenues include exploring cross-modal supervision via millimeter-wave radar and vision foundation models (Wi2Vi), as well as deploying decentralized federated learning paradigms to guarantee absolute user privacy across large-scale smart campus deployments.

@@ -1,4 +1,5 @@
 import re
+from pathlib import Path
 from collections import Counter
 from typing import Dict, Any, List, Optional
 from rich.console import Console
@@ -16,7 +17,14 @@ from first_phase.semantic_scholar_search import (
     search_semantic_scholar,
     fetch_references_for_paper,
 )
-from first_phase.pdf_reader import download_and_extract_pdf_text
+from first_phase.pdf_reader import (
+    download_paper_pdf,
+    extract_text_from_local_pdf,
+    extract_sections_from_pdf_text,
+    extract_references_from_text,
+    parse_reference_entry,
+    sanitize_filename,
+)
 from first_phase.extractor import extract_paper_analysis
 
 console = Console()
@@ -51,26 +59,35 @@ class PaperSearchAndExtractionSkill(BaseSkill):
                 error="No research 'topic' or 'query' provided in arguments or agent context.",
             )
 
-        max_papers = kwargs.get("max_papers", context.get("max_papers", 5))
+        # Limit to max 100 papers
+        requested_max = kwargs.get("max_papers", context.get("max_papers", 10))
+        try:
+            max_papers = min(max(1, int(requested_max)), 100)
+        except (ValueError, TypeError):
+            max_papers = 10
+
         sources = kwargs.get("sources", context.get("sources", ["arxiv", "semantic_scholar"]))
-        extract_pdf_text = kwargs.get("extract_pdf_text", False)
+        extract_pdf_text = kwargs.get("extract_pdf_text", True)
+        papers_dir = Path(kwargs.get("papers_dir") or context.get("papers_dir") or "papers")
+        papers_dir.mkdir(parents=True, exist_ok=True)
 
         console.print(f"  [bold]Research Topic:[/bold] '{query}'")
         console.print(f"  [bold]Target Sources:[/bold] {sources}")
-        console.print(f"  [bold]Max Papers:[/bold] {max_papers}")
+        console.print(f"  [bold]Max Papers Limit:[/bold] {max_papers} (capped at 100 max)")
+        console.print(f"  [bold]PDF Download Folder:[/bold] [italic]{papers_dir.resolve()}[/italic]")
 
         all_papers: List[PaperMetadata] = []
 
         # 1. Search Semantic Scholar
         if "semantic_scholar" in sources:
-            console.print("  [cyan]• Querying Semantic Scholar API...[/cyan]")
+            console.print("  [cyan]* Querying Semantic Scholar API...[/cyan]")
             s2_papers = search_semantic_scholar(query, max_results=max_papers)
             console.print(f"    Found {len(s2_papers)} papers on Semantic Scholar.")
             all_papers.extend(s2_papers)
 
         # 2. Search arXiv
         if "arxiv" in sources:
-            console.print("  [cyan]• Querying arXiv API...[/cyan]")
+            console.print("  [cyan]* Querying arXiv API...[/cyan]")
             arxiv_papers = search_arxiv(query, max_results=max_papers)
             console.print(f"    Found {len(arxiv_papers)} papers on arXiv.")
             all_papers.extend(arxiv_papers)
@@ -103,24 +120,61 @@ class PaperSearchAndExtractionSkill(BaseSkill):
 
             # If paper is from arXiv and has no references, attempt Semantic Scholar resolution
             if not paper.references and paper.paper_id.startswith("arxiv:"):
-                arxiv_clean_id = paper.paper_id.replace("arxiv:", "")
-                console.print(f"    Enriching references for arXiv ID: {arxiv_clean_id}")
-                fetched_refs = fetch_references_for_paper(f"ARXIV:{arxiv_clean_id}")
+                raw_arxiv_id = paper.paper_id.replace("arxiv:", "")
+                clean_arxiv_id = re.sub(r"v\d+$", "", raw_arxiv_id)
+                console.print(f"    Enriching references for arXiv ID: {clean_arxiv_id}")
+                fetched_refs = fetch_references_for_paper(f"ARXIV:{clean_arxiv_id}")
                 if fetched_refs:
                     paper.references = fetched_refs
                     console.print(f"    Retrieved {len(fetched_refs)} references from citation graph.")
 
-            # Optional PDF text download
+            # Download paper PDF and extract text / references
             pdf_context = ""
-            if extract_pdf_text and paper.pdf_url:
-                console.print(f"    Extracting text from PDF: {paper.pdf_url}")
-                pdf_context = download_and_extract_pdf_text(paper.pdf_url, max_pages=5)
+            if paper.pdf_url:
+                clean_id = sanitize_filename(paper.paper_id.replace("arxiv:", "").replace("s2:", ""))
+                clean_title = sanitize_filename(paper.title)
+                pdf_filename = f"{clean_id}_{clean_title[:50]}.pdf"
+                
+                console.print(f"    Downloading paper PDF: [italic]{pdf_filename}[/italic]")
+                local_path = download_paper_pdf(paper.pdf_url, papers_dir, pdf_filename)
+                
+                if local_path and local_path.exists():
+                    paper.local_pdf_path = str(local_path.resolve())
+                    kb_size = local_path.stat().st_size // 1024
+                    console.print(f"    [green][+] Saved PDF locally:[/green] {local_path.name} ({kb_size} KB)")
+                    pdf_context = extract_text_from_local_pdf(local_path, max_pages=15)
+                elif extract_pdf_text:
+                    # In-memory fallback if disk download failed
+                    pdf_context = download_and_extract_pdf_text(paper.pdf_url, max_pages=15)
+
+                # Extract structured chapters/sections from PDF
+                if pdf_context:
+                    sections = extract_sections_from_pdf_text(pdf_context, topic=query)
+                    if sections:
+                        paper.sections = sections
+                        console.print(f"    Segmented {len(sections)} major chapters: {', '.join(sections.keys())}")
+
+                # If references are still empty, extract them from PDF text
+                if not paper.references and pdf_context:
+                    raw_refs = extract_references_from_text(pdf_context)
+                    if raw_refs:
+                        for raw in raw_refs:
+                            parsed = parse_reference_entry(raw)
+                            paper.references.append(
+                                PaperReference(
+                                    title=parsed["title"],
+                                    year=parsed["year"],
+                                    citation_text=parsed["citation_text"],
+                                )
+                            )
+                        console.print(f"    Extracted {len(paper.references)} references directly from paper PDF.")
 
             # Analyze paper ideas using LLM
             analysis = extract_paper_analysis(
                 paper=paper,
                 llm_client=self.llm_client,
-                additional_text=pdf_context
+                additional_text=pdf_context,
+                topic=query
             )
             analyzed_papers.append(analysis)
 
@@ -147,8 +201,10 @@ class PaperSearchAndExtractionSkill(BaseSkill):
             top_recurring_references=top_refs,
         )
 
+        downloaded_count = sum(1 for p in analyzed_papers if p.paper.local_pdf_path)
         summary = (
             f"Extracted ideas from {len(analyzed_papers)} papers. "
+            f"Downloaded {downloaded_count} PDF files to '{papers_dir.resolve()}'. "
             f"Aggregated {len(all_references)} citations with {len(top_refs)} top recurring foundational references."
         )
 

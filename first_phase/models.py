@@ -12,6 +12,14 @@ class PaperReference(BaseModel):
     citation_text: Optional[str] = None
 
 
+class PaperSection(BaseModel):
+    """Extracted major chapter / section from an academic paper."""
+    section_category: str  # "introduction", "related_work", "methodology", "experiments", "conclusion"
+    heading: str
+    paragraphs: List[str] = Field(default_factory=list)
+    word_count: int = 0
+
+
 class PaperMetadata(BaseModel):
     """Metadata for an academic paper."""
     paper_id: str
@@ -21,9 +29,11 @@ class PaperMetadata(BaseModel):
     abstract: str = ""
     url: Optional[str] = None
     pdf_url: Optional[str] = None
+    local_pdf_path: Optional[str] = None
     citation_count: Optional[int] = None
     source: str = "unknown"  # "arxiv", "semantic_scholar", etc.
     references: List[PaperReference] = Field(default_factory=list)
+    sections: Dict[str, PaperSection] = Field(default_factory=dict)
 
 
 class ExtractedPaperAnalysis(BaseModel):
@@ -35,6 +45,7 @@ class ExtractedPaperAnalysis(BaseModel):
     main_ideas: List[str] = Field(default_factory=list)
     key_references_highlighted: List[str] = Field(default_factory=list)
     limitations: Optional[str] = None
+    most_relevant_paragraphs: List[str] = Field(default_factory=list)
 
 
 class SearchAndExtractionOutput(BaseModel):

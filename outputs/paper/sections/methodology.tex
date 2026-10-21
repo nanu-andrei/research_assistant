@@ -1,0 +1,31 @@
+\section{System Methodology and Architecture}
+\label{sec:methodology}
+This section details the formal system model, signal sanitization pipeline, and our proposed \textbf{RobustSense} architecture for \textit{wifi movement detection}.
+
+\subsection{Physical Channel Signal Model}
+Consider a wireless communication link comprising a transmitter with $N_{tx}$ antennas and a receiver with $N_{rx}$ antennas operating over an Orthogonal Frequency Division Multiplexing (OFDM) standard with $S$ subcarriers. Under electromagnetic multipath propagation, the complex Channel Impulse Response (CIR) $h(\tau)$ is formalized as:
+\begin{equation}
+    h(\tau) = \sum_{l=1}^{L} \alpha_l e^{j \phi_l} \delta(\tau - \tau_l)
+    \label{eq:cir}
+\end{equation}
+where $L$ denotes the total number of multipath propagation paths, and $\alpha_l$, $\phi_l$, and $\tau_l$ represent the amplitude attenuation, phase shift, and propagation delay of path $l$, respectively. At each subcarrier frequency $f_k$, the sampled Channel State Information (CSI) matrix $\mathbf{H} \in \mathbb{C}^{N_{tx} \times N_{rx} \times S}$ captures the superimposed channel frequency response:
+\begin{equation}
+    H_{i,j}(f_k) = \|H_{i,j}(f_k)\| \, e^{j \angle H_{i,j}(f_k)}
+    \label{eq:csi}
+\end{equation}
+
+\subsection{Phase Sanitization and Static Clutter Removal}
+Raw CSI measurements are corrupted by Carrier Frequency Offset (CFO) and Sampling Frequency Offset (SFO), which introduce linear phase drift across subcarrier indices. To restore physical phase integrity, we apply linear regression phase unwrapping:
+\begin{equation}
+    \hat{\phi}_k = \angle H_k - a \cdot k - b
+    \label{eq:phase_unwrap}
+\end{equation}
+where $a$ and $b$ represent the fitted slope and offset. Following phase calibration, static environmental reflections (multipath from static walls and furniture) are decoupled from dynamic human motion reflections using a high-pass Butterworth Doppler velocity filter with cutoff frequency $f_c = 2.0\,\text{Hz}$.
+
+\subsection{Self-Supervised Environment-Invariant Encoder}
+To achieve room-invariant representations without requiring target-environment labeled samples, \textbf{RobustSense} employs a dual-stream Temporal Convolutional Network (TCN) trained via contrastive mutual information maximization. Given two augmented views $(\mathbf{x}_i, \mathbf{x}_j)$ of the same spatial motion trajectory under distinct noise transforms, the contrastive InfoNCE loss is formulated as:
+\begin{equation}
+    \mathcal{L}_{contrastive} = - \log \frac{\exp(\text{sim}(\mathbf{z}_i, \mathbf{z}_j) / \tau)}{\sum_{k=1}^{2N} \mathbb{I}_{[k \neq i]} \exp(\text{sim}(\mathbf{z}_i, \mathbf{z}_k) / \tau)}
+    \label{eq:contrastive}
+\end{equation}
+where $\mathbf{z} = f_{\theta}(\mathbf{x})$ denotes the normalized latent embedding, $\text{sim}(\mathbf{u}, \mathbf{v}) = \mathbf{u}^T \mathbf{v} / (\|\mathbf{u}\| \|\mathbf{v}\|)$, and $\tau$ is the temperature hyperparameter. The final multi-task training objective combines supervised classification with contrastive regularization: $\mathcal{L}_{total} = \mathcal{L}_{CE} + \lambda \mathcal{L}_{contrastive}$.

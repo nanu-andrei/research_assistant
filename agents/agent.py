@@ -1,7 +1,15 @@
+import sys
 from typing import Dict, Any, List, Optional
 from rich.console import Console
 from agents.base_skill import BaseSkill, SkillResult
 from agents.llm_client import LLMClient
+
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 console = Console()
 
@@ -21,7 +29,7 @@ class ResearchAgent:
     def register_skill(self, skill: BaseSkill) -> None:
         """Register a new skill into the agent's capability registry."""
         self.skills[skill.name] = skill
-        console.print(f"[green]✓ Registered skill:[/green] [bold]{skill.name}[/bold] - {skill.description}")
+        console.print(f"[green][+] Registered skill:[/green] [bold]{skill.name}[/bold] - {skill.description}")
 
     def run_skill(self, skill_name: str, **kwargs) -> SkillResult:
         """Execute a specific registered skill by name."""
@@ -31,21 +39,21 @@ class ResearchAgent:
             return SkillResult(success=False, error=error_msg)
 
         skill = self.skills[skill_name]
-        console.print(f"\n[cyan]▶ Running skill:[/cyan] [bold]{skill.name}[/bold]...")
+        console.print(f"\n[cyan][>] Running skill:[/cyan] [bold]{skill.name}[/bold]...")
 
         try:
             result = skill.execute(self.context, **kwargs)
             if result.success:
                 # Merge returned data into agent context
                 self.context[skill.name] = result.data
-                console.print(f"[green]✓ Completed skill:[/green] [bold]{skill.name}[/bold]")
+                console.print(f"[green][+] Completed skill:[/green] [bold]{skill.name}[/bold]")
                 if result.summary:
                     console.print(f"  [dim]{result.summary}[/dim]")
             else:
-                console.print(f"[red]✗ Skill failed:[/red] {skill.name} - {result.error}")
+                console.print(f"[red][-] Skill failed:[/red] {skill.name} - {result.error}")
             return result
         except Exception as e:
-            console.print(f"[red]✗ Exception during skill execution:[/red] {e}")
+            console.print(f"[red][-] Exception during skill execution:[/red] {e}")
             return SkillResult(success=False, error=str(e))
 
     def run_pipeline(self, skill_names: Optional[List[str]] = None, initial_context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

@@ -3,6 +3,7 @@ import re
 from typing import Optional, List
 from agents.llm_client import LLMClient
 from first_phase.models import PaperMetadata, ExtractedPaperAnalysis
+from first_phase.pdf_reader import clean_into_paragraphs, select_top_relevant_paragraphs
 
 SYSTEM_PROMPT = """You are an expert academic research assistant specializing in deep literature review, concept extraction, and citation network analysis.
 Your job is to analyze the provided academic paper details (title, abstract, text) and extract the core ideas, methodology, findings, and references in a clean, structured JSON format."""
@@ -35,16 +36,28 @@ Respond ONLY with the JSON object. Do not wrap in markdown tags if possible, or 
 def extract_paper_analysis(
     paper: PaperMetadata,
     llm_client: Optional[LLMClient] = None,
-    additional_text: str = ""
+    additional_text: str = "",
+    topic: str = "",
 ) -> ExtractedPaperAnalysis:
     """
-    Extract structured ideas, methodology, and findings from paper metadata and text.
+    Extract structured ideas, methodology, findings, and 3-4 substantial relevant paragraphs from paper.
     Uses LLM when available; falls back to rule-based heuristics if LLM is unavailable or unconfigured.
     """
     if llm_client is None:
         llm_client = LLMClient()
 
-    # If there's an LLM available, try calling it
+    # Extract top 3-4 paragraphs from paper sections or additional text
+    all_paras = []
+    if paper.sections:
+        for sec in paper.sections.values():
+            all_paras.extend(sec.paragraphs)
+    if not all_paras and additional_text:
+        all_paras = clean_into_paragraphs(additional_text)
+    if not all_paras and paper.abstract:
+        all_paras = clean_into_paragraphs(paper.abstract)
+
+    top_paras = select_top_relevant_paragraphs(all_paras, topic or paper.title, count=4)
+
     prompt = ANALYSIS_PROMPT_TEMPLATE.format(
         title=paper.title,
         authors=", ".join(paper.authors),
@@ -70,19 +83,19 @@ def extract_paper_analysis(
                 key_findings=data.get("key_findings", []),
                 main_ideas=data.get("main_ideas", []),
                 key_references_highlighted=data.get("key_references_highlighted", []),
-                limitations=data.get("limitations")
+                limitations=data.get("limitations"),
+                most_relevant_paragraphs=top_paras
             )
     except Exception as e:
         print(f"[Extractor] LLM extraction encountered error ({e}). Using heuristic extraction.")
 
     # Fallback to heuristic extraction
-    return _heuristic_extract(paper)
+    return _heuristic_extract(paper, top_paras)
 
 
 def _parse_llm_json(raw: str) -> Optional[dict]:
     """Parse JSON safely from LLM output."""
     clean = raw.strip()
-    # Strip markdown fences if present
     if clean.startswith("```"):
         clean = re.sub(r"^```(?:json)?\n?", "", clean)
         clean = re.sub(r"\n?```$", "", clean)
@@ -98,8 +111,8 @@ def _parse_llm_json(raw: str) -> Optional[dict]:
     return None
 
 
-def _heuristic_extract(paper: PaperMetadata) -> ExtractedPaperAnalysis:
-    """Rule-based heuristic extraction from abstract when LLM is unavailable."""
+def _heuristic_extract(paper: PaperMetadata, top_paras: Optional[List[str]] = None) -> ExtractedPaperAnalysis:
+    """Rule-based heuristic extraction from abstract and sections when LLM is unavailable."""
     abstract = paper.abstract or ""
     sentences = [s.strip() for s in re.split(r"[.!?]\s+", abstract) if len(s.strip()) > 10]
 
@@ -126,5 +139,6 @@ def _heuristic_extract(paper: PaperMetadata) -> ExtractedPaperAnalysis:
         key_findings=findings,
         main_ideas=main_ideas,
         key_references_highlighted=ref_titles,
-        limitations="Heuristic mode: Configure LLM_MODEL & API key for in-depth reasoning."
+        limitations="Heuristic mode: Configure LLM_MODEL & API key for in-depth reasoning.",
+        most_relevant_paragraphs=top_paras or []
     )

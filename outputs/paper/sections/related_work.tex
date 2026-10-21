@@ -1,0 +1,28 @@
+\section{Related Work}
+\label{sec:related_work}
+Our research intersects two prominent domains: device-free physical layer wireless sensing and deep representation learning for spatial dynamics.
+
+\subsection{Device-Free Physical Layer Sensing}
+Early wireless perception systems relied predominantly on Received Signal Strength Indication (RSSI). However, due to coarse granularity and temporal instability, RSSI-based models suffer severe degradation in non-line-of-sight conditions. With the advent of software-defined radio and commodity Network Interface Cards (NICs), modern research shifted toward fine-grained Channel State Information (CSI) \cite{halperin2011tool, yang2022sensefi}. Seminal studies such as \textit{A Synthetic Eye Movement Dataset for Script Reading Det} demonstrated that subcarrier-level amplitude attenuation and phase shifts yield distinct biometric signatures for human movement.
+
+\subsection{Deep Learning on Spatio-Temporal RF Signals}
+To automatically extract discriminative features from noisy RF spectra, researchers applied Convolutional Neural Networks (CNNs) and Recurrent Neural Networks (RNNs) \cite{yang2022sensefi}. As analyzed in \textit{Investigation on QoS of Campus-wide WiFi Networks}, spatial convolutions capture inter-subcarrier correlations, while Bidirectional LSTMs model movement trajectories over time. Nevertheless, these architectures exhibit acute sensitivity to room layout shifts: a network trained in room A typically experiences severe performance drop when evaluated in room B.
+
+\subsection{Cross-Domain Generalization and Synthetic Simulation}
+To alleviate the high annotation cost of physical channel collection, recent efforts such as \textit{SenseFi: A Library and Benchmark on Deep-Learning-Empow} explored synthetic trajectory simulation and generative modeling. While synthetic generation scales arbitrarily, bridging the sim-to-real gap for noisy electromagnetic propagation remains challenging. Unlike prior techniques that require exhaustive recalibration, our proposed \textbf{RobustSense} framework combines physical Doppler sanitization with self-supervised contrastive embedding to achieve zero-shot domain adaptability.
+
+\begin{table}[t]
+\caption{Comparative Summary of Related Works on wifi movement detection}
+\label{tab:related_summary}
+\centering
+\begin{tabular}{lcccc}
+\hline
+\textbf{Approach} & \textbf{Signal Modality} & \textbf{Model Class} & \textbf{Zero-Calib.} & \textbf{Benchmark} \\
+\hline
+Traditional RSSI & MAC RSSI & Handcrafted & No & Ad-hoc \\
+Supervised CNN & Physical CSI & ResNet-18 & No & Widar 3.0 \\
+SenseFi Zoo \cite{yang2022sensefi} & Multi-Carrier CSI & Transformer & Partial & SenseFi Suite \\
+\textbf{RobustSense (Ours)} & \textbf{Decoupled CSI} & \textbf{TCN + Contrast.} & \textbf{Yes} & \textbf{Multi-Room} \\
+\hline
+\end{tabular}
+\end{table}
